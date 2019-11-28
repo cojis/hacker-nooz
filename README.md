@@ -1,2 +1,2 @@
-# hackerNewsTerm
-View hackernews stories in your terminal
+# hacker-nooz
+Browse HackerNews from the comforts of your own terminal
