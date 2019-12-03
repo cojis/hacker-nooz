@@ -11,7 +11,7 @@ import (
 // any given time
 const StoryLimit = 50
 
-// Story is the json mapping for HackerNews API
+// Story is the story json mapping for HackerNews API
 type Story struct {
 	Creator     string `json:"by"`
 	Descendants int    `json:"descendants"`
@@ -24,6 +24,17 @@ type Story struct {
 	URL         string `json:"url"`
 }
 
+// Comment is the comment json mapping for HackerNews API
+type Comment struct {
+	By     string `json:"by"`
+	ID     int    `json:"id"`
+	Kids   []int  `json:"kids"`
+	Parent int    `json:"parent"`
+	Text   string `json:"text"`
+	Time   int    `json:"time"`
+	Type   string `json:"type"`
+}
+
 // TopStories is a type alias for parsing stories
 type TopStories = []int
 
@@ -32,8 +43,37 @@ type NoozClient struct {
 	Client *http.Client
 }
 
+// GetComment returns comment of a specific id
+func (n *NoozClient) GetComment(id int) Comment {
+	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json?", id)
+	req, err := http.NewRequest("GET", url, nil)
+	req.Header.Add("Content-type", `application/json`)
+
+	resp, err := n.Client.Do(req)
+	if err != nil {
+		/* TODO: handle */
+		panic(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		/* TODO: handle */
+		panic(err)
+	}
+
+	// Unmarshal
+	var comment Comment
+	err = json.Unmarshal(body, &comment)
+	if err != nil {
+		/* TODO: handle */
+		panic(err)
+	}
+	return comment
+}
+
 // GetStory returns the HackerNews story of a specific id
-func (n *NoozClient) GetStory(id int) {
+func (n *NoozClient) GetStory(id int) Story {
 	url := fmt.Sprintf("https://hacker-news.firebaseio.com/v0/item/%d.json", id)
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Add("Content-type", `application/json`)
@@ -58,9 +98,7 @@ func (n *NoozClient) GetStory(id int) {
 		/* TODO: handle */
 		panic(err)
 	}
-	fmt.Println(story.Title)
-	fmt.Println(story.URL)
-	fmt.Println()
+	return story
 }
 
 // GetTopStories returns limit number of top stories on HackerNews
@@ -90,7 +128,21 @@ func (n *NoozClient) GetTopStories(limit int) {
 	}
 
 	for i := 0; i < limit; i++ {
-		n.GetStory(topIds[i])
+		story := n.GetStory(topIds[i])
+		fmt.Printf("[%d] %s\n", i, story.Title)
+		fmt.Println(story.URL)
+		if story.URL != "" {
+			fmt.Println()
+		}
+	}
+
+	var selection int
+	fmt.Scanf("%d", &selection)
+	story := n.GetStory(topIds[selection])
+	for i := 0; i < len(story.Kids); i++ {
+		fmt.Println()
+		comment := n.GetComment(story.Kids[i])
+		fmt.Println(comment.Text)
 	}
 }
 
